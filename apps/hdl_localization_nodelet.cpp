@@ -58,7 +58,7 @@ public:
     invert_gyro = private_nh.param<bool>("invert_gyro", false);
     if (use_imu) {
       NODELET_INFO("enable imu-based prediction");
-      imu_sub = mt_nh.subscribe("/gpsimu_driver/imu_data", 256, &HdlLocalizationNodelet::imu_callback, this);
+      imu_sub = mt_nh.subscribe("/ouster_top/imu", 100, &HdlLocalizationNodelet::imu_callback, this);
     }
     points_sub = mt_nh.subscribe("/velodyne_points", 5, &HdlLocalizationNodelet::points_callback, this);
     globalmap_sub = nh.subscribe("/globalmap", 1, &HdlLocalizationNodelet::globalmap_callback, this);
@@ -112,7 +112,7 @@ private:
       return ndt;
     } else if(reg_method.find("NDT_CUDA") != std::string::npos) {
       NODELET_INFO("NDT_CUDA is selected");
-      boost::shared_ptr<fast_gicp::NDTCuda<PointT, PointT>> ndt(new fast_gicp::NDTCuda<PointT, PointT>);
+      std::shared_ptr<fast_gicp::NDTCuda<PointT, PointT>> ndt(new fast_gicp::NDTCuda<PointT, PointT>);
       ndt->setResolution(ndt_resolution);
 
       if(reg_method.find("D2D") != std::string::npos) {
@@ -143,7 +143,7 @@ private:
   void initialize_params() {
     // intialize scan matching method
     double downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
-    boost::shared_ptr<pcl::VoxelGrid<PointT>> voxelgrid(new pcl::VoxelGrid<PointT>());
+    std::shared_ptr<pcl::VoxelGrid<PointT>> voxelgrid(new pcl::VoxelGrid<PointT>());
     voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
     downsample_filter = voxelgrid;
 
@@ -265,9 +265,11 @@ private:
     auto aligned = pose_estimator->correct(stamp, filtered);
 
     if(aligned_pub.getNumSubscribers()) {
-      aligned->header.frame_id = "map";
-      aligned->header.stamp = cloud->header.stamp;
-      aligned_pub.publish(aligned);
+      aligned->header.frame_id = "odom";
+        aligned->header.stamp = cloud->header.stamp;
+        sensor_msgs::PointCloud2 msg_output;
+        pcl::toROSMsg(*aligned, msg_output);
+      aligned_pub.publish(msg_output);
     }
 
     if(status_pub.getNumSubscribers()) {
@@ -394,41 +396,41 @@ private:
    */
   void publish_odometry(const ros::Time& stamp, const Eigen::Matrix4f& pose) {
     // broadcast the transform over tf
-    if(tf_buffer.canTransform(robot_odom_frame_id, odom_child_frame_id, ros::Time(0))) {
-      geometry_msgs::TransformStamped map_wrt_frame = tf2::eigenToTransform(Eigen::Isometry3d(pose.inverse().cast<double>()));
-      map_wrt_frame.header.stamp = stamp;
-      map_wrt_frame.header.frame_id = odom_child_frame_id;
-      map_wrt_frame.child_frame_id = "map";
+    // if(tf_buffer.canTransform(robot_odom_frame_id, odom_child_frame_id, ros::Time(0))) {
+    //   geometry_msgs::TransformStamped map_wrt_frame = tf2::eigenToTransform(Eigen::Isometry3d(pose.inverse().cast<double>()));
+    //   map_wrt_frame.header.stamp = stamp;
+    //   map_wrt_frame.header.frame_id = odom_child_frame_id;
+    //   map_wrt_frame.child_frame_id = "map";
 
-      geometry_msgs::TransformStamped frame_wrt_odom = tf_buffer.lookupTransform(robot_odom_frame_id, odom_child_frame_id, ros::Time(0), ros::Duration(0.1));
-      Eigen::Matrix4f frame2odom = tf2::transformToEigen(frame_wrt_odom).cast<float>().matrix();
+    //   geometry_msgs::TransformStamped frame_wrt_odom = tf_buffer.lookupTransform(robot_odom_frame_id, odom_child_frame_id, ros::Time(0), ros::Duration(0.1));
+    //   Eigen::Matrix4f frame2odom = tf2::transformToEigen(frame_wrt_odom).cast<float>().matrix();
 
-      geometry_msgs::TransformStamped map_wrt_odom;
-      tf2::doTransform(map_wrt_frame, map_wrt_odom, frame_wrt_odom);
+    //   geometry_msgs::TransformStamped map_wrt_odom;
+    //   tf2::doTransform(map_wrt_frame, map_wrt_odom, frame_wrt_odom);
 
-      tf2::Transform odom_wrt_map;
-      tf2::fromMsg(map_wrt_odom.transform, odom_wrt_map);
-      odom_wrt_map = odom_wrt_map.inverse();
+    //   tf2::Transform odom_wrt_map;
+    //   tf2::fromMsg(map_wrt_odom.transform, odom_wrt_map);
+    //   odom_wrt_map = odom_wrt_map.inverse();
 
-      geometry_msgs::TransformStamped odom_trans;
-      odom_trans.transform = tf2::toMsg(odom_wrt_map);
-      odom_trans.header.stamp = stamp;
-      odom_trans.header.frame_id = "map";
-      odom_trans.child_frame_id = robot_odom_frame_id;
+    //   geometry_msgs::TransformStamped odom_trans;
+    //   odom_trans.transform = tf2::toMsg(odom_wrt_map);
+    //   odom_trans.header.stamp = stamp;
+    //   odom_trans.header.frame_id = "map";
+    //   odom_trans.child_frame_id = robot_odom_frame_id;
 
-      tf_broadcaster.sendTransform(odom_trans);
-    } else {
-      geometry_msgs::TransformStamped odom_trans = tf2::eigenToTransform(Eigen::Isometry3d(pose.cast<double>()));
-      odom_trans.header.stamp = stamp;
-      odom_trans.header.frame_id = "map";
-      odom_trans.child_frame_id = odom_child_frame_id;
-      tf_broadcaster.sendTransform(odom_trans);
-    }
+    //   tf_broadcaster.sendTransform(odom_trans);
+    // } else {
+    //   geometry_msgs::TransformStamped odom_trans = tf2::eigenToTransform(Eigen::Isometry3d(pose.cast<double>()));
+    //   odom_trans.header.stamp = stamp;
+    //   odom_trans.header.frame_id = "map";
+    //   odom_trans.child_frame_id = odom_child_frame_id;
+    //   tf_broadcaster.sendTransform(odom_trans);
+    // }
 
     // publish the transform
     nav_msgs::Odometry odom;
     odom.header.stamp = stamp;
-    odom.header.frame_id = "map";
+    odom.header.frame_id = "odom";
 
     tf::poseEigenToMsg(Eigen::Isometry3d(pose.cast<double>()), odom.pose.pose);
     odom.child_frame_id = odom_child_frame_id;

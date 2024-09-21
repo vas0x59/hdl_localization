@@ -12,7 +12,12 @@
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/transforms.h>
+
 #include <pcl/filters/voxel_grid.h>
+// #include <
+
 
 namespace hdl_localization {
 
@@ -45,7 +50,7 @@ private:
     std::string globalmap_pcd = private_nh.param<std::string>("globalmap_pcd", "");
     globalmap.reset(new pcl::PointCloud<PointT>());
     pcl::io::loadPCDFile(globalmap_pcd, *globalmap);
-    globalmap->header.frame_id = "map";
+    globalmap->header.frame_id = "odom";
 
     std::ifstream utm_file(globalmap_pcd + ".utm");
     if (utm_file.is_open() && private_nh.param<bool>("convert_utm_to_local", true)) {
@@ -73,7 +78,9 @@ private:
   }
 
   void pub_once_cb(const ros::WallTimerEvent& event) {
-    globalmap_pub.publish(globalmap);
+      sensor_msgs::PointCloud2 msg_output;
+      pcl::toROSMsg(*globalmap, msg_output);
+    globalmap_pub.publish(msg_output);
   }
 
   void map_update_callback(const std_msgs::String &msg){
@@ -81,7 +88,7 @@ private:
     std::string globalmap_pcd = msg.data;
     globalmap.reset(new pcl::PointCloud<PointT>());
     pcl::io::loadPCDFile(globalmap_pcd, *globalmap);
-    globalmap->header.frame_id = "map";
+    globalmap->header.frame_id = "odom";
 
     // downsample globalmap
     double downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
@@ -93,7 +100,10 @@ private:
     voxelgrid->filter(*filtered);
 
     globalmap = filtered;
-    globalmap_pub.publish(globalmap);
+
+    sensor_msgs::PointCloud2 msg_output;
+    pcl::toROSMsg(*globalmap, msg_output);
+    globalmap_pub.publish(msg_output);
   }
 
 private:
