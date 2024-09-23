@@ -2,7 +2,7 @@
 <launch>
   <!-- arguments -->
   <arg name="nodelet_manager" default="velodyne_nodelet_manager" />
-  <arg name="points_topic" default="/joined_point_cloud" />
+  <arg name="points_topic" default="/all_lidar_unwarped" />
   <!-- input clouds are transformed in odom_child_frame, and then localization is performed in that frame -->
   <!-- this is useful to match the LIDAR and IMU coodinate systems -->
   <arg name="odom_child_frame_id" default="base_link" />
@@ -14,8 +14,8 @@
   <arg name="use_global_localization" default="true" />
   <arg name="imu_topic" default="/ouster_top/imu" />
   <arg name="enable_robot_odometry_prediction" value="false" />
-  <arg name="robot_odom_frame_id" value="odom" />
-  <arg name="plot_estimation_errors" value="false" />
+  <arg name="robot_odom_frame_id" value="odom_glim" />
+  <arg name="plot_estimation_errors" value="false" /> 
 
   <include file="$(find hdl_global_localization)/launch/hdl_global_localization.launch" if="$(arg use_global_localization)" />
 
@@ -24,7 +24,7 @@
 
     <!-- globalmap_server_nodelet -->
     <node pkg="nodelet" type="nodelet" name="globalmap_server_nodelet" args="load hdl_localization/GlobalmapServerNodelet $(arg nodelet_manager)">
-      <param name="globalmap_pcd" value="/workspace/Projects/1726866921345357.pcd" />
+      <param name="globalmap_pcd" value="/workspace/Projects/zenitka_v1.pcd" />
       <param name="convert_utm_to_local" value="false" />
       <param name="downsample_resolution" value="0.1" />
     </node>
