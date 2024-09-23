@@ -82,6 +82,7 @@ add_library(hdl_localization_nodelet
   src/hdl_localization/pose_estimator.cpp
   apps/hdl_localization_nodelet.cpp
 )
+
 target_link_libraries(hdl_localization_nodelet
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
@@ -94,4 +95,17 @@ target_link_libraries(globalmap_server_nodelet
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
+
+
+add_library(hdl_localization_nodelet_external_filter
+#        src/hdl_localization/pose_estimator.cpp
+        apps/hdl_localization_nodelet_external_filter.cpp
+)
+
+target_link_libraries(hdl_localization_nodelet_external_filter
+        ${catkin_LIBRARIES}
+        ${PCL_LIBRARIES}
+)
+add_dependencies(hdl_localization_nodelet_external_filter ${PROJECT_NAME}_gencpp)
+
 
