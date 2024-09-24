@@ -236,7 +236,7 @@ private:
     measurement_noise.middleRows(3, 4) *= 0.01;
     geometry_msgs::TransformStamped T_ob;
   try {
-    T_ob = tf_buffer.lookupTransform(robot_odom_frame_id , odom_child_frame_id, points_msg->header.stamp, ros::Duration(0));
+    T_ob = tf_buffer.lookupTransform(robot_odom_frame_id , odom_child_frame_id, points_msg->header.stamp, ros::Duration(1./30));
     // correct
   } catch (std::exception e) {
     std::cout << e.what() << std::endl;
