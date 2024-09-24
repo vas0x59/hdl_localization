@@ -35,13 +35,13 @@
 
 namespace hdl_localization {
 
-class HdlLocalizationNodelet : public nodelet::Nodelet {
+class HdlLocalizationNodeletExternal : public nodelet::Nodelet {
 public:
   using PointT = pcl::PointXYZI;
 
-  HdlLocalizationNodelet() : tf_buffer(), tf_listener(tf_buffer) {
+  HdlLocalizationNodeletExternal() : tf_buffer(ros::Duration(10)), tf_listener(tf_buffer) {
   }
-  virtual ~HdlLocalizationNodelet() {
+  virtual ~HdlLocalizationNodeletExternal() {
   }
 
   void onInit() override {
@@ -55,11 +55,11 @@ public:
     odom_child_frame_id = private_nh.param<std::string>("odom_child_frame_id", "base_link");
 
     // NODELET_INFO("enable imu-based prediction");
-    // odom_sub = mt_nh.subscribe("/nav/odom", 100, &HdlLocalizationNodelet::imu_callback, this);
+    // odom_sub = mt_nh.subscribe("/nav/odom", 100, &HdlLocalizationNodeletExternal::imu_callback, this);
 
-    points_sub = mt_nh.subscribe("/velodyne_points", 5, &HdlLocalizationNodelet::points_callback, this);
-    globalmap_sub = nh.subscribe("/globalmap", 1, &HdlLocalizationNodelet::globalmap_callback, this);
-    // initialpose_sub = nh.subscribe("/initialpose", 8, &HdlLocalizationNodelet::initialpose_callback, this);
+    points_sub = mt_nh.subscribe("/velodyne_points", 5, &HdlLocalizationNodeletExternal::points_callback, this);
+    globalmap_sub = nh.subscribe("/globalmap", 1, &HdlLocalizationNodeletExternal::globalmap_callback, this);
+    // initialpose_sub = nh.subscribe("/initialpose", 8, &HdlLocalizationNodeletExternal::initialpose_callback, this);
 
     pose_pub = nh.advertise<nav_msgs::Odometry>("/loc/odom", 5, false);
     aligned_pub = nh.advertise<sensor_msgs::PointCloud2>("/loc/aligned_points", 5, false);
@@ -75,7 +75,7 @@ public:
       set_global_map_service = nh.serviceClient<hdl_global_localization::SetGlobalMap>("/hdl_global_localization/set_global_map");
       query_global_localization_service = nh.serviceClient<hdl_global_localization::QueryGlobalLocalization>("/hdl_global_localization/query");
 
-      relocalize_server = nh.advertiseService("/relocalize", &HdlLocalizationNodelet::relocalize, this);
+      relocalize_server = nh.advertiseService("/relocalize", &HdlLocalizationNodeletExternal::relocalize, this);
     }
   }
 
@@ -232,16 +232,19 @@ private:
     //   }
     // }
     Eigen::MatrixXf measurement_noise = Eigen::MatrixXf::Identity(7, 7);
-    measurement_noise.middleRows(0, 3) *= 0.01;
-    measurement_noise.middleRows(3, 4) *= 0.001;
-
-    auto T_ob = tf_buffer.lookupTransform(robot_odom_frame_id , odom_child_frame_id, points_msg->header.stamp, ros::Duration(0));
+    measurement_noise.middleRows(0, 3) *= 0.05;
+    measurement_noise.middleRows(3, 4) *= 0.01;
+    geometry_msgs::TransformStamped T_ob;
+  try {
+    T_ob = tf_buffer.lookupTransform(robot_odom_frame_id , odom_child_frame_id, points_msg->header.stamp, ros::Duration(0));
     // correct
-
+  } catch (std::exception e) {
+    std::cout << e.what() << std::endl;
+  }
     auto initial_guess = tf2::transformToEigen(T_ob);
 
     pcl::PointCloud<PointT>::Ptr aligned(new pcl::PointCloud<PointT>());
-    registration->setInputSource(cloud);
+    registration->setInputSource(filtered);
     registration->align(*aligned, initial_guess.cast<float>().matrix());
 
     Eigen::Matrix4f trans = registration->getFinalTransformation();
@@ -546,4 +549,4 @@ private:
 }
 
 
-PLUGINLIB_EXPORT_CLASS(hdl_localization::HdlLocalizationNodelet, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(hdl_localization::HdlLocalizationNodeletExternal, nodelet::Nodelet)
