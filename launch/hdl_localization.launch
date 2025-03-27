@@ -2,7 +2,7 @@
 <launch>
   <!-- arguments -->
   <arg name="nodelet_manager" default="velodyne_nodelet_manager" />
-  <arg name="points_topic" default="/all_lidar_unwarped" />
+  <arg name="points_topic" default="/ouster_top/points" />
   <!-- input clouds are transformed in odom_child_frame, and then localization is performed in that frame -->
   <!-- this is useful to match the LIDAR and IMU coodinate systems -->
   <arg name="odom_child_frame_id" default="base_link" />
@@ -11,10 +11,10 @@
   <arg name="use_imu" default="true" />
   <arg name="invert_imu_acc" default="false" />
   <arg name="invert_imu_gyro" default="false" />
-  <arg name="use_global_localization" default="true" />
+  <arg name="use_global_localization" default="false" />
   <arg name="imu_topic" default="/ouster_top/imu" />
   <arg name="enable_robot_odometry_prediction" value="false" />
-  <arg name="robot_odom_frame_id" value="odom_glim" />
+  <arg name="robot_odom_frame_id" value="odom" />
   <arg name="plot_estimation_errors" value="false" /> 
 
   <include file="$(find hdl_global_localization)/launch/hdl_global_localization.launch" if="$(arg use_global_localization)" />
@@ -24,7 +24,7 @@
 
     <!-- globalmap_server_nodelet -->
     <node pkg="nodelet" type="nodelet" name="globalmap_server_nodelet" args="load hdl_localization/GlobalmapServerNodelet $(arg nodelet_manager)">
-      <param name="globalmap_pcd" value="/home/vasily/akva_part1.pcd" />
+      <param name="globalmap_pcd" value="/workspace/Projects/map_mipt_krug_v2.pcd"/>
       <param name="convert_utm_to_local" value="false" />
       <param name="downsample_resolution" value="0.1" />
     </node>
@@ -46,7 +46,7 @@
       <param name="robot_odom_frame_id" value="$(arg robot_odom_frame_id)" />
       <!-- ndt settings -->
       <!-- available reg_methods: NDT_OMP, NDT_CUDA_P2D, NDT_CUDA_D2D-->
-      <param name="reg_method" value="NDT_OMP" />
+      <param name="reg_method" value="NDT_CUDA_D2D" />
       <!-- if NDT is slow for your PC, try DIRECT1 serach method, which is a bit unstable but extremely fast -->
       <param name="ndt_neighbor_search_method" value="DIRECT7" />
       <param name="ndt_neighbor_search_radius" value="2.0" />
